@@ -23,14 +23,58 @@ data Expr
   deriving (Show, Eq)
 
 -- recrExpr :: ... anotar el tipo ...
-recrExpr = error "COMPLETAR EJERCICIO 7"
+recrExpr :: (Float -> a)                      -- Const
+         -> (Float -> Float -> a)             -- Rango
+         -> (Expr -> a -> Expr -> a -> a)     -- Suma
+         -> (Expr -> a -> Expr -> a -> a)     -- Resta
+         -> (Expr -> a -> Expr -> a -> a)     -- Mult
+         -> (Expr -> a -> Expr -> a -> a)     -- Div
+         -> Expr
+         -> a
+recrExpr fConst fRango fSuma fResta fMult fDiv expr =
+  case expr of
+    Const x   -> fConst x
+    Rango a b -> fRango a b
+    Suma e1 e2  -> fSuma e1 evalIzq e2 evalDer
+    Resta e1 e2 -> fResta e1 evalIzq e2 evalDer
+    Mult e1 e2  -> fMult e1 evalIzq e2 evalDer
+    Div e1 e2   -> fDiv e1 evalIzq e2 evalDer
+  where
+    evalIzq = recrExpr fConst fRango fSuma fResta fMult fDiv e1
+    evalDer = recrExpr fConst fRango fSuma fResta fMult fDiv e2
 
 -- foldExpr :: ... anotar el tipo ...
-foldExpr = error "COMPLETAR EJERCICIO 7"
+foldExpr :: (Float -> a)      -- Const
+         -> (Float -> Float -> a) -- Rango
+         -> (a -> a -> a)         -- Suma
+         -> (a -> a -> a)         -- Resta
+         -> (a -> a -> a)         -- Mult
+         -> (a -> a -> a)         -- Div
+         -> Expr
+         -> a
+foldExpr fConst fRango fSuma fResta fMult fDiv expr =
+  case expr of
+    Const x   -> fConst x
+    Rango a b -> fRango a b
+    Suma e1 e2  -> fSuma evalIzq evalDer
+    Resta e1 e2 -> fResta evalIzq evalDer
+    Mult e1 e2  -> fMult evalIzq evalDer
+    Div e1 e2   -> fDiv evalIzq evalDer
+  where
+    evalIzq = foldExpr fConst fRango fSuma fResta fMult fDiv e1
+    evalDer = foldExpr fConst fRango fSuma fResta fMult fDiv e2
 
 -- | Evaluar expresiones dado un generador de números aleatorios
-eval :: Expr -> G Float
-eval = error "COMPLETAR EJERCICIO 8"
+eval :: Expr -> Gen -> (Float, Gen)
+eval expr gen = foldExpr
+    (\x g -> (x, g))                 -- Const
+    (\a b g -> dameUno (a, b) g)     -- Rango
+    (\(expr1,g1) (expr2,g2) -> (expr1+expr2, g2)) -- Suma
+    (\(expr1,g1) (expr2,g2) -> (expr1-expr2, g2)) -- Resta
+    (\(expr1,g1) (expr2,g2) -> (expr1*expr2, g2)) -- Mult
+    (\(expr1,g1) (expr2,g2) -> (expr1/expr2, g2)) -- Div
+    expr gen
+
 
 -- | @armarHistograma m n f g@ arma un histograma con @m@ casilleros
 -- a partir del resultado de tomar @n@ muestras de @f@ usando el generador @g@.
